@@ -1,0 +1,6 @@
+﻿var hoge
+var fuga
+
+hoge -= fuga
+hoge -= 1
+hoge *= 2
