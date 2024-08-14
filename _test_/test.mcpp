@@ -6,5 +6,8 @@ func piyo:
     hoge -= 1
     hoge -= fuga
 
-if hoge:
+if not hoge:
+    piyo()
+
+while hoge:
     piyo()

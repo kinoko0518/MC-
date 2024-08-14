@@ -2,7 +2,7 @@
 scoreboard objectives add MCPP.num dummy
 #<-System
 
-execute if hoge function __a_indent_under__/g9z0u39qijrhv061
+execute unless hoge function __a_indent_under__/rik930dzc6529luy
 
 #System->
 scoreboard objectives remove MCPP.num

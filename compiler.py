@@ -144,15 +144,23 @@ def compile(_raw_code:str, current_dir:str):
 
             os.makedirs(current_dir + r"\__a_indent_under__", exist_ok = True)
             __functin_name__ = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
-            make_mcfunction("\n".join(__compiled_in_indents__), __functin_name__, current_dir + r"\__a_indent_under__")
 
             __result_in_indent__ = "function " + r"__a_indent_under__/{}".format(__functin_name__)
 
             if _raw[0] == "if":
-                add_code("execute {} {}".format(" ".join(_raw).rsplit(":")[0], __result_in_indent__))
+                if _raw[1] == "not":
+                    add_code("execute {} {}".format("unless " + " ".join(_raw[2:]).rsplit(":")[0], __result_in_indent__))
+                else:
+                    add_code("execute {} {}".format("if " + " ".join(_raw[1:]).rsplit(":")[0], __result_in_indent__))
             
             if _raw[0] == "func":
                 functions[_raw[1].rsplit(":")[0]] = __result_in_indent__
+            
+            if _raw[0] == "while":
+                __compiled_in_indents__.append("execute {} {}".format("unless " + " ".join(_raw)[1:-1].rsplit(":")[0], __result_in_indent__))
+            
+            make_mcfunction("\n".join(__compiled_in_indents__), __functin_name__, current_dir + r"\__a_indent_under__")
+
     return result
 
 
