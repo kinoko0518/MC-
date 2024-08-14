@@ -1,6 +1,10 @@
 ﻿var hoge
 var fuga
 
-hoge -= fuga
-hoge -= 1
-hoge *= 2
+func piyo:
+    hoge *= 2
+    hoge -= 1
+    hoge -= fuga
+
+if hoge:
+    piyo()

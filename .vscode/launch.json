@@ -8,7 +8,7 @@
             "name": "AutoCompile",
             "type": "debugpy",
             "request": "launch",
-            "program": "translator.py",
+            "program": "compiler.py",
             "console": "integratedTerminal",
             "args": [
                 ".\\_test_\\test.mcpp"

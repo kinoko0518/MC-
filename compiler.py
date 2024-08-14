@@ -10,7 +10,7 @@ compiled = "#System->\nscoreboard objectives add MCPP.num dummy\n#<-System\n".fo
 
 variables = []
 constant_dummies = []
-functions = []
+functions = {}
 
 pointer = 0
 
@@ -19,7 +19,6 @@ pointer = 0
 
 # 開始前処理
 __path__ = "\\".join(sys.argv[1].split("\\")[0:-1])
-print(__path__)
 
 raw_code[0] = raw_code[0].replace("\ufeff", "") #UFT-8に設定したときの邪魔な\ufeffを消す
 
@@ -85,6 +84,13 @@ def compile(_raw_code:str, current_dir:str):
 
 
 
+        # 関数を変換
+        if _raw[0].endswith("()"):
+            if _raw[0][0:-2] in functions.keys():
+                add_code(functions[_raw[0][0:-2]])
+
+
+
         # 変数宣言の処理
         if _raw[0] == "var":
             define_variable(_raw[1])
@@ -110,28 +116,43 @@ def compile(_raw_code:str, current_dir:str):
             else:
                 add_code(convert_to_operation(_raw[0], _raw[2], operation))
 
+
+
         # インデントされていた場合の処理
         if ":" in _raw[-1]:
+            # インデント内をコンパイルする
+            def count_indent(__input__:str): # インデントの数を数える関数
+                _i = 0
+                while _i in range(len(__input__)):
+                    if not __input__[-_i].isspace():
+                        break
+                    else:
+                        _i += 1
+                return _i
+
             global pointer
             global raw_code
 
-            __indent__ = _raw[0].count('    ')
+            __indent__ = count_indent(raw_code[pointer + 1])
             __compiled_in_indents__ = []
 
-            while __indent__ == raw_code[pointer + 1].split(" ")[0].count('    '):
+            while __indent__ == count_indent(raw_code[pointer + 1]):
                 pointer += 1
                 __compiled_in_indents__.append(compile(raw_code[pointer].replace("    ", ""), current_dir))
-                if pointer + 1 >= len(raw_code):
+                if pointer + 1 >= len(raw_code): # コードの終わりまで来たらbreak
                     break
-            
-            os.makedirs(current_dir + r"\__A_INDENT_UNDER__", exist_ok = True)
-            __functin_name__ = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-            make_mcfunction("\n".join(__compiled_in_indents__), __functin_name__, current_dir + r"\__A_INDENT_UNDER__")
 
-            __result_in_indent__ = "function " + r"{}\__A_INDENT_UNDER__\{}".format(current_dir, __functin_name__)
+            os.makedirs(current_dir + r"\__a_indent_under__", exist_ok = True)
+            __functin_name__ = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+            make_mcfunction("\n".join(__compiled_in_indents__), __functin_name__, current_dir + r"\__a_indent_under__")
+
+            __result_in_indent__ = "function " + r"__a_indent_under__/{}".format(__functin_name__)
 
             if _raw[0] == "if":
                 add_code("execute {} {}".format(" ".join(_raw).rsplit(":")[0], __result_in_indent__))
+            
+            if _raw[0] == "func":
+                functions[_raw[1].rsplit(":")[0]] = __result_in_indent__
     return result
 
 
