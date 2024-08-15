@@ -1,13 +1,4 @@
 ﻿var hoge
 var fuga
 
-func piyo:
-    hoge *= 2
-    hoge -= 1
-    hoge -= fuga
-
-if not hoge:
-    piyo()
-
-while hoge:
-    piyo()
+hoge = hoge * 2 - 1

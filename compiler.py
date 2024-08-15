@@ -33,6 +33,8 @@ def make_mcfunction(code:str, name:str, path:str):
     __file__.close()
 
 def compile(_raw_code:str, current_dir:str):
+    valid_opeartions = ["+", "-", "*", "/"]
+
     global pointer
     result = ""
 
@@ -61,19 +63,13 @@ def compile(_raw_code:str, current_dir:str):
             
             return constant_name
 
-        def convert_to_operation(target:str, source:str, operation:str):
-            if operation == "+" or operation == "-" or operation == "*" or operation == "/":
-                if source.isdigit():
-                    return "scoreboard players operation {} MCPP.num {}= {} MCPP.num".format("#" + target, operation, constant(source))
-                if source in variables:
-                    return "scoreboard players operation {} MCPP.num {}= {} MCPP.num".format("#" + target, operation, "#" + source)
-
         def add_code(__code__:str):
-            nonlocal result
-            if result == "":
-                result = __code__
-            else:
-                result += "\n" + __code__
+            if not __code__ == None:
+                nonlocal result
+                if result == "":
+                    result = __code__
+                else:
+                    result += "\n" + __code__
         
         def add_comment(__comment__:str):
             nonlocal result
@@ -81,6 +77,24 @@ def compile(_raw_code:str, current_dir:str):
                 result = "#" + __comment__
             else:
                 result += "\n#" + __comment__
+        
+        def convert_to_operation(target:str, source:str, operation:str):
+            if (operation == "+" or operation == "-") and source.isdigit(): # 整数の足し算、引き算だともっと短く書けるのでその処理
+                if operation == "+":
+                    return "scoreboard players add {} MCPP.num {}".format("#" + target, source)
+                if operation == "-":
+                    return "scoreboard players remove {} MCPP.num {}".format("#" + target, source)
+            else:
+                if operation in valid_opeartions:
+                    if source.isdigit():
+                        return "scoreboard players operation {} MCPP.num {}= {} MCPP.num".format("#" + target, operation, constant(source))
+                    if source in variables:
+                        return "scoreboard players operation {} MCPP.num {}= {} MCPP.num".format("#" + target, operation, "#" + source)
+                else:
+                    raise ValueError("Given operation is invalid. Invallid operation -> " + operation)
+        
+        def return_syntax_error(__error__):
+            return "\033[31m!SYNTAX ERROR! {} [Line {}]\033[0m".format(__error__, pointer)
 
 
 
@@ -99,22 +113,22 @@ def compile(_raw_code:str, current_dir:str):
 
         # 代入の処理
         if _raw[0] in variables and _raw[1] == "=":
-            set_value(_raw[0], _raw[2])
+            if not _raw[0] == _raw[2]:
+                set_value(_raw[0], _raw[2])
+            if len(_raw) >= 3: # 代入に計算が含まれていた場合の処理
+                for _i in range(3, len(_raw) - 1):
+                    if not _i % 2 == 0:
+                        if _raw[_i] in valid_opeartions:
+                            add_code(convert_to_operation(_raw[0], _raw[_i + 1], _raw[_i]))
+                        else:
+                            return_syntax_error("Invalid operation")
 
 
 
         #四則演算の処理
-        if _raw[0] in variables and (_raw[1] == "+=" or _raw[1] == "-=" or _raw[1] == "*=" or _raw[1] == "/="):
-            operation = _raw[1][0]
-            add_comment("{} {} {}".format(_raw[0], operation, _raw[2]))
-
-            if (operation == "+" or operation == "-") and _raw[2].isdigit(): # 整数の足し算、引き算だともっと短く書けるのでその処理
-                if operation == "+":
-                    add_code("scoreboard players add {} MCPP.num {}".format("#" + _raw[0], _raw[2]))
-                if operation == "-":
-                    add_code("scoreboard players remove {} MCPP.num {}".format("#" + _raw[0], _raw[2]))
-            else:
-                add_code(convert_to_operation(_raw[0], _raw[2], operation))
+        if _raw[0] in variables and _raw[1].rsplit("=")[0] in valid_opeartions:
+            add_comment("{} {} {}".format(_raw[0], _raw[1][0], _raw[2]))
+            add_code(convert_to_operation(_raw[0], _raw[2], _raw[1][0]))
 
 
 
@@ -164,10 +178,13 @@ def compile(_raw_code:str, current_dir:str):
     return result
 
 
-if raw_code_path.name.split("\\")[-1].split(".")[-1] == "mcpp":
+# ここから先がメイン処理
+if raw_code_path.name.split("\\")[-1].split(".")[-1] == "mcpp": # 拡張子が.mcppか確認する
     while pointer in range(len(raw_code)):
         code = raw_code[pointer]
         __compiled__ = compile(code, compiled_folder)
+        if __compiled__.startswith("!SYNTAX ERROR!"):
+            print(__compiled__)
         if not len(__compiled__) == 0:
             compiled += "\n" + __compiled__
         pointer += 1
