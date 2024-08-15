@@ -1,4 +1,3 @@
-﻿var hoge
-var fuga
+﻿hoge = 1
 
-hoge = hoge * 2 - 1
+hoge = hoge + hoge + hoge

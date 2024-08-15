@@ -40,18 +40,16 @@ def compile(_raw_code:str, current_dir:str):
 
     if not (_raw_code.replace("    ", "") == "" or _raw_code.startswith("#")):
         _raw = _raw_code.split(" ")
-
-        def define_variable(variable_name:str): # 変数を宣言する関数
-            global variables
-            variables.append(variable_name)
         
-        def set_value(variable_name:str, value:int): #変数に代入する関数
+        def set_value(variable_name:str, value:str): #変数に代入する関数
             global variables
-
-            if variable_name in variables:
+            
+            if value.isdigit() or value in variables:
                 add_code("scoreboard players set {} {} {}".format(dummy, variable_name, value))
+                if not variable_name in variables: # 代入の対象が宣言されていなかったら代入対象を変数として宣言する
+                    variables.append(variable_name)
             else:
-                raise Exception("Undefined variable")
+                return_syntax_error("The value is invalid.")
         
         def constant(constant_value:int):
             global constant_dummies
@@ -105,14 +103,9 @@ def compile(_raw_code:str, current_dir:str):
 
 
 
-        # 変数宣言の処理
-        if _raw[0] == "var":
-            define_variable(_raw[1])
-
-
-
         # 代入の処理
-        if _raw[0] in variables and _raw[1] == "=":
+        if _raw[1] == "=":
+            add_comment(" ".join(_raw))
             if not _raw[0] == _raw[2]:
                 set_value(_raw[0], _raw[2])
             if len(_raw) >= 3: # 代入に計算が含まれていた場合の処理
