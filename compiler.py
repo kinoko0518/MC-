@@ -4,16 +4,14 @@ raw_code_path = open(sys.argv[1], 'r', encoding="utf-8")
 raw_code = raw_code_path.read().split("\n")
 
 code_name = raw_code_path.name.split("\\")[-1].replace(".mcpp", "")
-dummy = "#" + code_name
 
-compiled = "#System->\nscoreboard objectives add MCPP.num dummy\n#<-System\n".format(dummy)
+compiled = "#System->\nscoreboard objectives add MCPP.num dummy\n#<-System\n"
 
 variables = []
 constant_dummies = []
 functions = {}
 
 pointer = 0
-
 
 
 
@@ -33,31 +31,86 @@ def make_mcfunction(code:str, name:str, path:str):
     __file__.close()
 
 def compile(_raw_code:str, current_dir:str):
-    valid_opeartions = ["+", "-", "*", "/"]
+    valid_opeartions = ["+", "-", "*", "/", "%"]
 
     global pointer
     result = ""
 
     if not (_raw_code.replace("    ", "") == "" or _raw_code.startswith("#")):
         _raw = _raw_code.split(" ")
+
+        def get_defined_variable(variable_name:str):
+            for _i in range(len(variables)):
+                if variables[_i][0] == variable_name:
+                    return _i
+            return -1
+
+        def get_type(variable_name:str):
+            return variables[get_defined_variable(variable_name)][1]
+
+
+        # 変数宣言関数群　プロトコル -> [変数名, 変数型, 変数データ1, 変数データ2...]
+        def define_int_variable(variable_name:str, value:int): #int型変数を宣言する関数 プロトコル -> [変数名, int, 数値]
+            variables.append([variable_name, "int", value])
+            add_code("scoreboard players set #{}.{} num {}".format(code_name, variable_name, value))
+        
+        def define_float_variable(variable_name:str, value:float): #float型変数を宣言する関数 プロトコル -> [変数名, float, 生の値, 倍率]
+            magnification = 10 ** len(str(value).rsplit(".")[1].rsplit("0")[0]) # 倍率を計算する
+            variables.append([variable_name, "float", float(value), magnification]) # 変数にデータを保存する
+            add_code("scoreboard players set #{}.MAGNIFICATIONS.{} num {}".format(code_name, variable_name, magnification)) # 倍率をスコアボードに保存しておく
+            add_code("scoreboard players set #{}.{} num {}".format(code_name, variable_name, int(float(value) * magnification))) # 整数化した数値をスコアボードに代入する
         
         def set_value(variable_name:str, value:str): #変数に代入する関数
             global variables
+
+            __type__ = "none"
             
-            if value.isdigit() or value in variables:
-                add_code("scoreboard players set {} {} {}".format(dummy, variable_name, value))
-                if not variable_name in variables: # 代入の対象が宣言されていなかったら代入対象を変数として宣言する
-                    variables.append(variable_name)
+            # 型を判別
+            if value.isascii():
+                if float(value).is_integer(): # 整数だったら
+                    if value.endswith(".0"): #明示的にfloat型で定義されていたら
+                        __type__ = "float"
+                    else:
+                        __type__ = "int"
+                else: # float型だったら
+                    __type__ = "float"
             else:
-                return_syntax_error("The value is invalid.")
+                raise ValueError("Invalid type. The value is {}".format(value))
+            
+            if get_defined_variable(variable_name) == -1: # 変数が宣言されていなければ
+                if __type__ == "int":
+                    define_int_variable(variable_name, value)
+                if __type__ == "float":
+                    define_float_variable(variable_name, value)
+            else: # 変数が宣言されていれば
+                if get_type(variable_name) == __type__: # 変数と値の型が一致していることを確認して
+                    if __type__ == "int":
+                        variables[get_defined_variable(variable_name)][2] = int(value)
+                        add_code("scoreboard players set #{}.{} num {}".format(code_name, variable_name, value))
+                    if __type__ == "float":
+                        magnification = len(str(value).rsplit(".")[1])
+                        variables[get_defined_variable(variable_name)][2] = float(value)
+                        add_code("scoreboard players set #{}.{} num {}".format(code_name, variable_name, int(float(value) * (10 ** magnification))))
+                        add_code("scoreboard players set #{}.MAGNIFICATION.{} num {}".format(code_name, variable_name, magnification))
+                else:
+                    return_syntax_error("The given value has different type from the given variable")
         
-        def constant(constant_value:int):
+        def int_to_float(variable_name:string):
+            add_code("scoreboard players set #{}.MAGNIFICATION.{} num 1".format(code_name, variable_name))
+            variables[get_defined_variable(variable_name)][1] = "float"
+            variables[get_defined_variable(variable_name)][2] = float(variables[get_defined_variable(variable_name)][2])
+            variables[get_defined_variable(variable_name)].append(1)
+
+
+
+        def constant(constant_value:int): #定数が存在していればその定数を、存在していなければ新規作成して返す
             global constant_dummies
 
             constant_name = "#{}.CONSTANT.{}".format(code_name, constant_value)
             
             if not constant_name in constant_dummies:
                 add_code("scoreboard players set {} MCPP.num {}".format(constant_name, constant_value))
+                constant_dummies.append(constant_name)
             
             return constant_name
 
@@ -77,22 +130,67 @@ def compile(_raw_code:str, current_dir:str):
                 result += "\n#" + __comment__
         
         def convert_to_operation(target:str, source:str, operation:str):
-            if (operation == "+" or operation == "-") and source.isdigit(): # 整数の足し算、引き算だともっと短く書けるのでその処理
-                if operation == "+":
-                    return "scoreboard players add {} MCPP.num {}".format("#" + target, source)
-                if operation == "-":
-                    return "scoreboard players remove {} MCPP.num {}".format("#" + target, source)
-            else:
-                if operation in valid_opeartions:
-                    if source.isdigit():
-                        return "scoreboard players operation {} MCPP.num {}= {} MCPP.num".format("#" + target, operation, constant(source))
-                    if source in variables:
-                        return "scoreboard players operation {} MCPP.num {}= {} MCPP.num".format("#" + target, operation, "#" + source)
+            float_actuality = 8
+            
+            if (not get_defined_variable(target) == -1 and get_type(target) in ["int", "float"]): # targetがintかfloatの変数ならば
+                if (source.isascii() or (not get_defined_variable(source) == -1 and get_type(source) in ["int", "float"])): #sourceが数字かintかfloatの変数であるならば
+                    __source__ = source
+                    __source_magnification__ = 1
+                    __is_source_float__ = "." in str(source)
+
+                    if __is_source_float__: # sourceが小数を含む場合の処理
+                        if get_type(target) == "int": # targetがint型だったらfloat型に変換する
+                            int_to_float(target)
+                        
+                        __source__ = float(source) * variables[get_defined_variable(target)][3]
+                        if "." in str(__source__):
+                            __source_magnification__ = 10 ** len(str(__source__).rsplit(".")[1])
+                            __source__ = int(__source__ * __source_magnification__) # sourceを整数にする
+                            # 倍率を揃える
+                            variables[get_defined_variable(target)][3] *= __source_magnification__
+                            add_code("scoreboard players operation #{}.MAGNIFICATION.{} MCPP.num *= {} MCPP.num".format(code_name, target, constant(__source_magnification__)))
+                            add_code("scoreboard players operation #{} MCPP.num *= {} MCPP.num".format(target, constant(__source_magnification__)))
+                    
+                    if (operation == "+" or operation == "-") and source.isascii(): # 整数の足し算、引き算だともっと短く書けるのでその処理
+                        __add_or_remove__:str
+                        if operation == "+":
+                            __add_or_remove__ = "add"
+                        else:
+                            __add_or_remove__ = "remove"
+
+                        # 足す/引く
+                        add_code("scoreboard players {} #{} MCPP.num {}".format(__add_or_remove__, target, __source__))
+                        
+                        if operation == "+":
+                            variables[get_defined_variable(target)][2] += float(source)
+                        elif operation == "-":
+                            variables[get_defined_variable(target)][2] -= float(source)
+                    
+                    elif operation == "/" and "." in str(variables[get_defined_variable(target)][2] / float(source)): # 計算が割り算かつ結果が小数を含むなら
+                        if get_type(target) == "int": # targetがint型だったらfloat型に変換する
+                            int_to_float(target)
+                        __result_magnification__ = 10 ** min(len(str(variables[get_defined_variable(target)][2] / float(source)).rsplit(".")[1]), float_actuality)
+                        add_code("scoreboard players operation #{}.MAGNIFICATION.{} MCPP.num *= {} MCPP.num".format(code_name, target, constant(__result_magnification__)))
+                        add_code("scoreboard players operation #{} MCPP.num *= {} MCPP.num".format(target, constant(__result_magnification__)))
+                    
+                    else:
+                        if operation in valid_opeartions:
+                            if source.isascii():
+                                add_code("scoreboard players operation #{} MCPP.num {}= #{} MCPP.num".format(target, operation, constant(__source__)))
+                            else: # sourceが変数だった場合
+                                add_code("scoreboard players operation #{} MCPP.num {}= #{} MCPP.num".format(target, operation, source))
+                        else:
+                            raise ValueError("Given operation is invalid. Invallid operation -> " + operation)
                 else:
-                    raise ValueError("Given operation is invalid. Invallid operation -> " + operation)
+                    return_syntax_error("The source must be number or defined float/int type variable")
+            else:
+                return_syntax_error("The target must be float/int type variable")
         
         def return_syntax_error(__error__):
-            return "\033[31m!SYNTAX ERROR! {} [Line {}]\033[0m".format(__error__, pointer)
+            print("\033[31m!SYNTAX ERROR! {} [Line {}]\033[0m".format(__error__, pointer))
+        
+        def return_warning(__warning__):
+            print("\033[33mWarning: {} [Line {}]\033[0m".format(__warning__, pointer))
 
 
 
@@ -112,7 +210,7 @@ def compile(_raw_code:str, current_dir:str):
                 for _i in range(3, len(_raw) - 1):
                     if not _i % 2 == 0:
                         if _raw[_i] in valid_opeartions:
-                            add_code(convert_to_operation(_raw[0], _raw[_i + 1], _raw[_i]))
+                            convert_to_operation(_raw[0], _raw[_i + 1], _raw[_i])
                         else:
                             return_syntax_error("Invalid operation")
 
@@ -121,7 +219,7 @@ def compile(_raw_code:str, current_dir:str):
         #四則演算の処理
         if _raw[0] in variables and _raw[1].rsplit("=")[0] in valid_opeartions:
             add_comment("{} {} {}".format(_raw[0], _raw[1][0], _raw[2]))
-            add_code(convert_to_operation(_raw[0], _raw[2], _raw[1][0]))
+            convert_to_operation(_raw[0], _raw[2], _raw[1][0])
 
 
 
