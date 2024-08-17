@@ -1,3 +1,5 @@
-﻿hoge = 1.1
+﻿func hoge(a,b,c):
+    if hogehoge:
+        fuga = 1
 
-hoge = hoge * 1.1 / 0.01
+hoge(a,b,c)
