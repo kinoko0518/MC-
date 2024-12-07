@@ -1,5 +1,0 @@
-﻿func hoge(a,b,c):
-    if hogehoge:
-        fuga = 1
-
-hoge(a,b,c)
