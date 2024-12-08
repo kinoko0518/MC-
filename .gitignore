@@ -1,4 +1,5 @@
 \dist
 \build
 \_test_\test_compiled
+\__pycache__
 compiler.spec
