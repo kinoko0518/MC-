@@ -18,6 +18,9 @@ def valid_check():
     print(task.parse_assignment("a *= 1"))
     print(task.parse_assignment("a /= 1 + 1"))
 
+    title("Logical Formula Validness Checking")
+    print(task.parse_logical_formula("a | b & ! c"))
+
     title("Parser Validness Checking")
     print(mcpp_parser.parser("a = 1 + 1 + 1"))
 

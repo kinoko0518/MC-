@@ -58,7 +58,6 @@ class Scoreboard:
                 return "scoreboard players add {} {} {}".format(self.mc_name, namespace, str(source))
             if type(source) == Scoreboard:
                 return self.operation("+=", source)
-
     
     # 引き算
     def __sub__(self, source) -> str:
@@ -77,8 +76,33 @@ class Scoreboard:
         if is_int(source):
             return self.operation("/=", source)
     
-    def __str__(self) -> str:
-        return self.mc_name
+    # 比較演算
+    def __eq__(self, other):
+        if type(other) is int:
+            return "if score {} {} matches {}".format(self.mc_name, namespace, str(other))
+        if type(other) is Scoreboard:
+            return "if score {} {} = {} {}".format(self.mc_name, namespace, other.mc_name, namespace)
+    
+    # 比較演算(否定)
+    def __ne__(self, other):
+        if type(other) is int:
+            return "unless score {} {} matches {}".format(self.mc_name, namespace, str(other))
+        if type(other) is Scoreboard:
+            return "unless score {} {} = {} {}".format(self.mc_name, namespace, other.mc_name, namespace)
+    
+    # 比較演算(以上)
+    def __le__(self, other):
+        if type(other) is int:
+            return "if score {} {} matches {}..".format(self.mc_name, namespace, str(other))
+        if type(other) is Scoreboard:
+            return "if score {} {} >= {} {}".format(self.mc_name, namespace, other.mc_name, namespace)
+    
+    # 比較演算(以下)
+    def __ge__(self, other):
+        if type(other) is int:
+            return "if score {} {} matches ..{}".format(self.mc_name, namespace, str(other))
+        if type(other) is Scoreboard:
+            return "if score {} {} <= {} {}".format(self.mc_name, namespace, other.mc_name, namespace)
     
     @property
     def freement(self) -> str:

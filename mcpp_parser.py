@@ -81,6 +81,20 @@ class ParseTaskInfo():
                 begin = i+1
         res += [self.guess_type(str.strip(raw[begin:]))]
         return res
+    
+    def split_logical_formula(self, raw:str) -> "list[str]":
+        begin:int = 0
+        res:"list[str]" = []
+        if not re.match(frml, raw):
+            print("Can't parse invalid formula.")
+        for i in range(len(raw)):
+            if raw[i] in ["!", "&", "|"]:
+                value = raw[begin:i]
+                operator = raw[i]
+                res += [value, operator]
+                begin = i+1
+        res += [str.strip(raw[begin:])]
+        return res
 
     # a = 1 + b - 3 * c / 5 のようなstr型の式をマイクラコマンドにパルスする
     # 例 : 
@@ -135,7 +149,10 @@ class ParseTaskInfo():
             return "\n".join(result)
         else:
             print("Invalid assignment. As it may be compiler's bug, please make issue on GitHub with how it happened.")
-
+    
+    def parse_logical_formula(self, raw:str):
+        tokens:list[str] = self.split_logical_formula(raw)
+        return tokens
 
     def parse_a_line(self, raw:str) -> str:
         # 代入系だったら
