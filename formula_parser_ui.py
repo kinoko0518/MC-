@@ -21,6 +21,7 @@ def setting():
         global overrided_namespace
         overrided_namespace = override_namespace_entry.get()
         mcpt.is_raw_variable_name = do_optimize_variablename.get()
+        setting.destroy()
 
     setting = tk.Tk()
     setting.title("Setting")
@@ -34,7 +35,7 @@ def setting():
 
     do_optimize_variablename = tk.BooleanVar(root)
     variablename_optimization = tk.Checkbutton(setting, text="Don't optimize variable names", variable=do_optimize_variablename)
-    do_optimize_variablename = mcpt.is_raw_variable_name
+    do_optimize_variablename.set(mcpt.is_raw_variable_name)
     variablename_optimization.pack(anchor="nw", padx=10)
 
     apply_button = tk.Button(setting, text="Apply Setting", command=apply_setting)

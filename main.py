@@ -3,7 +3,7 @@ import mcpp_parser
 
 def title(input:str, longness:int = 55):
     hyphen = int((longness - len(input)) / 2)
-    print("-"*hyphen+input+"-"*hyphen)
+    print("\n" + "-"*hyphen+input+"-"*hyphen)
 
 def valid_check():
     task = mcpp_parser.ParseTaskInfo()

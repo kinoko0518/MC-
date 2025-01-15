@@ -46,6 +46,12 @@ class ParseTaskInfo():
     def current_scope(self):
         return self.__current_scope
     
+    def define_variable(self, name:str, scope:list[str] = current_scope) -> mcpt.Scoreboard:
+        score = mcpt.Scoreboard(name, scope)
+        self.variables[name] = score
+        return score
+
+    @current_scope.setter
     def set_scope(self, new_scope:"list[str]"):
         res:str = self.destruct_local(new_scope)
         print(type(self.__current_scope), type(new_scope))
@@ -65,7 +71,7 @@ class ParseTaskInfo():
             return int(raw)
         elif raw.isidentifier():
             if not raw in self.variables.keys():
-                self.variables[raw] = mcpt.Scoreboard(raw, self.current_scope)
+                self.define_variable(raw)
             return self.variables[raw]
 
     def formula_to_tokens(self, raw:str) -> "list[str|int|mcpt.Scoreboard]":
@@ -121,8 +127,7 @@ class ParseTaskInfo():
         if var_name in self.variables.keys():
             target = self.variables[var_name]
         else:
-            target = mcpt.Scoreboard(var_name, self.current_scope, int)
-            self.variables[var_name] = target
+            target = self.define_variable(var_name)
         
         # 代入だったら
         if re.match(lhs+"="+frml, raw):
@@ -159,7 +164,7 @@ class ParseTaskInfo():
         if re.match("\w\s+[+-/*%]?="+frml, raw):
             return self.parse_assignment(raw)
 
-def parser(raw:str) -> str:
+def parse(raw:str) -> str:
     res:list[str] = []
     task = ParseTaskInfo()
     preparsed = preparser(raw)
